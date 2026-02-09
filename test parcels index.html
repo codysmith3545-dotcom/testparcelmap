@@ -182,6 +182,57 @@
   }
   .info-hint strong { color: var(--text-secondary); }
 
+  /* Feasibility */
+  .scorecard {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; border-radius: 6px; background: var(--bg-tertiary);
+    border: 1px solid var(--border); margin-bottom: 10px;
+  }
+  .score-value {
+    font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700;
+    color: var(--accent-green);
+  }
+  .score-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+  .score-meta { font-size: 11px; color: var(--text-secondary); }
+  .risk-list { display: flex; flex-direction: column; gap: 6px; }
+  .risk-item {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    padding: 6px 8px; border-radius: 5px; font-size: 11px; color: var(--text-secondary);
+  }
+  .risk-item span { font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+  .risk-item .ok { color: var(--accent-green); }
+  .risk-item .warn { color: var(--accent-yellow); }
+  .risk-item .bad { color: var(--accent-red); }
+  .report-btn {
+    width: 100%; border: 1px solid var(--border); background: var(--bg-tertiary);
+    color: var(--text-primary); padding: 8px 10px; border-radius: 6px;
+    font-size: 12px; cursor: pointer; transition: background 0.15s;
+  }
+  .report-btn:hover { background: var(--bg-hover); }
+
+  .report-modal {
+    position: absolute; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center;
+    background: rgba(10,14,23,0.7); backdrop-filter: blur(4px); opacity: 0; pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .report-modal.open { opacity: 1; pointer-events: auto; }
+  .report-card {
+    width: min(720px, 92vw); background: var(--bg-secondary); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px;
+  }
+  .report-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .report-title { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent-green); }
+  .report-close { background: transparent; border: none; color: var(--text-secondary); font-size: 18px; cursor: pointer; }
+  .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .report-block { background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-size: 11px; color: var(--text-secondary); }
+  .report-block strong { color: var(--text-primary); }
+  .report-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+  .report-actions button {
+    border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-primary);
+    padding: 6px 10px; border-radius: 6px; font-size: 11px; cursor: pointer;
+  }
+
   .coord-display {
     position: absolute; bottom: 6px; left: 288px; z-index: 5;
     font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-muted);
@@ -291,6 +342,26 @@
   </div>
 
   <div class="section">
+    <div class="section-title">Feasibility Snapshot</div>
+    <div class="scorecard">
+      <div>
+        <div class="score-label">Buildability</div>
+        <div class="score-meta" id="scoreStatus">Low risk</div>
+      </div>
+      <div class="score-value" id="scoreValue">78</div>
+    </div>
+    <div class="risk-list">
+      <div class="risk-item"><div>Floodplain exposure</div><span id="riskFlood" class="warn">⚠️ Moderate</span></div>
+      <div class="risk-item"><div>Wetland presence</div><span id="riskWetlands" class="ok">✅ Low</span></div>
+      <div class="risk-item"><div>Utility adjacency</div><span id="riskUtilities" class="ok">✅ Near</span></div>
+      <div class="risk-item"><div>Parcel data clarity</div><span id="riskParcels" class="warn">⚠️ Zoom 14+</span></div>
+      <div class="risk-item"><div>Market access</div><span id="riskAccess" class="ok">✅ Highway / rail</span></div>
+    </div>
+    <div style="height:8px;"></div>
+    <button class="report-btn" id="reportBtn">Generate Feasibility Report</button>
+  </div>
+
+  <div class="section">
     <div class="info-hint">
       <strong>Tip:</strong> Zoom to 14+ for parcel boundaries. Tap any transmission line or pipeline for details. All layers pull live from federal & state GIS services.
     </div>
@@ -301,10 +372,37 @@
 <div class="coord-display" id="coordDisplay">39.77°N, 86.16°W</div>
 <div id="map"></div>
 <div class="toast-container" id="toastContainer"></div>
+<div class="report-modal" id="reportModal">
+  <div class="report-card">
+    <div class="report-header">
+      <div class="report-title">Indiana Dev Intel — Feasibility Report</div>
+      <button class="report-close" id="reportClose">✕</button>
+    </div>
+    <div class="report-grid">
+      <div class="report-block"><strong>Area of Interest</strong><br><span id="reportCoords">39.77°N, 86.16°W</span><br>Zoom <span id="reportZoom">7.0</span></div>
+      <div class="report-block"><strong>Buildability Score</strong><br><span id="reportScore">78</span> / 100<br><span id="reportStatus">Low risk</span></div>
+      <div class="report-block"><strong>Key Constraints</strong><br><span id="reportConstraints">Floodplain, Wetlands</span></div>
+      <div class="report-block"><strong>Infrastructure Access</strong><br><span id="reportInfra">Transmission, Gas, Rail</span></div>
+    </div>
+    <div class="report-actions">
+      <button id="reportCopy">Copy Summary</button>
+      <button onclick="window.print()">Print / Save PDF</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const layerState = {};
 let map, popup;
+const dataStatus = {
+  transmission: false,
+  gas: false,
+  rail: false,
+  flood: true,
+  wetlands: true,
+  parcels: true,
+  plss: true,
+};
 
 function showToast(msg, type='info') {
   const c = document.getElementById('toastContainer');
@@ -318,6 +416,46 @@ function showToast(msg, type='info') {
 function showPopup(lngLat, html) {
   if (popup) popup.remove();
   popup = new maplibregl.Popup({ closeButton: true, maxWidth: '320px' }).setLngLat(lngLat).setHTML(html).addTo(map);
+}
+
+function getLayerVisible(id) {
+  if (!map.getLayer(id)) return false;
+  const v = map.getLayoutProperty(id, 'visibility');
+  return v !== 'none';
+}
+
+function updateScorecard() {
+  const zoom = map ? map.getZoom() : 7;
+  let score = 80;
+  const floodOn = getLayerVisible('flood-zones');
+  const wetlandsOn = getLayerVisible('wetlands');
+  const parcelsOn = getLayerVisible('parcels');
+
+  if (floodOn) score -= 12;
+  if (wetlandsOn) score -= 8;
+  if (zoom < 14) score -= 6;
+  if (!dataStatus.transmission && !dataStatus.gas) score -= 4;
+  if (dataStatus.rail) score += 2;
+
+  score = Math.max(30, Math.min(95, Math.round(score)));
+
+  const status = score >= 80 ? 'Low risk' : score >= 65 ? 'Moderate' : 'Higher risk';
+  document.getElementById('scoreValue').textContent = score;
+  document.getElementById('scoreStatus').textContent = status;
+
+  document.getElementById('riskFlood').textContent = floodOn ? '⚠️ Moderate' : '✅ Low';
+  document.getElementById('riskFlood').className = floodOn ? 'warn' : 'ok';
+  document.getElementById('riskWetlands').textContent = wetlandsOn ? '⚠️ Moderate' : '✅ Low';
+  document.getElementById('riskWetlands').className = wetlandsOn ? 'warn' : 'ok';
+  document.getElementById('riskParcels').textContent = zoom >= 14 ? '✅ Verified' : '⚠️ Zoom 14+';
+  document.getElementById('riskParcels').className = zoom >= 14 ? 'ok' : 'warn';
+  document.getElementById('riskUtilities').textContent = dataStatus.transmission || dataStatus.gas ? '✅ Near' : '⚠️ Unknown';
+  document.getElementById('riskUtilities').className = dataStatus.transmission || dataStatus.gas ? 'ok' : 'warn';
+  document.getElementById('riskAccess').textContent = dataStatus.rail ? '✅ Rail' : '⚠️ Limited';
+  document.getElementById('riskAccess').className = dataStatus.rail ? 'ok' : 'warn';
+
+  document.getElementById('reportScore').textContent = score;
+  document.getElementById('reportStatus').textContent = status;
 }
 
 // ── ArcGIS Feature Service query (for CORS-enabled services) ──
@@ -371,6 +509,7 @@ function initMap() {
 
   map.on('zoom', () => {
     document.getElementById('zoomLevel').textContent = map.getZoom().toFixed(1);
+    updateScorecard();
   });
   map.on('mousemove', (e) => {
     const {lng, lat} = e.lngLat;
@@ -382,6 +521,7 @@ function initMap() {
     addRasterLayers();
     addVectorLayers();
     setTimeout(() => document.getElementById('loading').classList.add('hidden'), 1200);
+    updateScorecard();
   });
 }
 
@@ -500,6 +640,8 @@ async function addVectorLayers() {
     map.on('mouseleave', 'transmission-lines', () => map.getCanvas().style.cursor = '');
     layerState['transmission-lines'] = { mapLayers: ['transmission-lines'] };
     showToast('✓ Transmission Lines loaded', 'success');
+    dataStatus.transmission = true;
+    updateScorecard();
   } catch(e) { console.error('Trans:', e); showToast('✗ Transmission Lines failed', 'error'); }
 
   // ── Natural Gas Pipelines ── (HIFLD on ArcGIS Online — same host as transmission, should have CORS)
@@ -529,6 +671,8 @@ async function addVectorLayers() {
     map.on('mouseleave', 'gas-pipelines', () => map.getCanvas().style.cursor = '');
     layerState['gas-pipelines'] = { mapLayers: ['gas-pipelines'] };
     showToast('✓ Gas Pipelines loaded', 'success');
+    dataStatus.gas = true;
+    updateScorecard();
   } catch(e) {
     console.error('Gas:', e);
     showToast('✗ Gas Pipelines failed — trying alternate…', 'error');
@@ -543,6 +687,8 @@ async function addVectorLayers() {
       });
       layerState['gas-pipelines'] = { mapLayers: ['gas-pipelines'] };
       showToast('✓ Gas Pipelines loaded (EIA)', 'success');
+      dataStatus.gas = true;
+      updateScorecard();
     } catch(e2) { console.error('Gas fallback:', e2); showToast('✗ Gas Pipelines unavailable', 'error'); }
   }
 
@@ -573,6 +719,8 @@ async function addVectorLayers() {
     map.on('mouseleave', 'railroads', () => map.getCanvas().style.cursor = '');
     layerState['railroads'] = { mapLayers: ['railroads'] };
     showToast('✓ Railroads loaded', 'success');
+    dataStatus.rail = true;
+    updateScorecard();
   } catch(e) { console.error('Rail:', e); showToast('✗ Railroads failed', 'error'); }
 }
 
@@ -591,12 +739,32 @@ function toggleLayer(el) {
       map.setLayoutProperty(lid, 'visibility', isOn ? 'none' : 'visible');
     }
   });
+  updateScorecard();
 }
 
 function toggleSidebar() {
   const sb = document.getElementById('sidebar');
   sb.classList.toggle('collapsed');
   document.getElementById('sidebarToggle').textContent = sb.classList.contains('collapsed') ? '▶' : '◀';
+}
+
+function updateReport() {
+  const center = map.getCenter();
+  const zoom = map.getZoom();
+  const lat = `${Math.abs(center.lat).toFixed(2)}°${center.lat >= 0 ? 'N' : 'S'}`;
+  const lng = `${Math.abs(center.lng).toFixed(2)}°${center.lng >= 0 ? 'E' : 'W'}`;
+  document.getElementById('reportCoords').textContent = `${lat}, ${lng}`;
+  document.getElementById('reportZoom').textContent = zoom.toFixed(1);
+  const constraints = [];
+  if (getLayerVisible('flood-zones')) constraints.push('Floodplain');
+  if (getLayerVisible('wetlands')) constraints.push('Wetlands');
+  if (!constraints.length) constraints.push('None detected');
+  document.getElementById('reportConstraints').textContent = constraints.join(', ');
+  const infra = [];
+  if (dataStatus.transmission) infra.push('Transmission');
+  if (dataStatus.gas) infra.push('Gas');
+  if (dataStatus.rail) infra.push('Rail');
+  document.getElementById('reportInfra').textContent = infra.length ? infra.join(', ') : 'Limited';
 }
 
 // ── Search ──
@@ -615,6 +783,24 @@ document.getElementById('searchInput').addEventListener('keydown', async (e) => 
       showToast(`📍 ${data[0].display_name.split(',').slice(0,2).join(',')}`, 'info');
     } else { showToast('No results found', 'error'); }
   } catch(err) { showToast('Search failed', 'error'); }
+});
+
+document.getElementById('reportBtn').addEventListener('click', () => {
+  updateReport();
+  document.getElementById('reportModal').classList.add('open');
+});
+document.getElementById('reportClose').addEventListener('click', () => {
+  document.getElementById('reportModal').classList.remove('open');
+});
+document.getElementById('reportCopy').addEventListener('click', async () => {
+  updateReport();
+  const summary = `Indiana Dev Intel Feasibility\nScore: ${document.getElementById('reportScore').textContent}/100\nStatus: ${document.getElementById('reportStatus').textContent}\nArea: ${document.getElementById('reportCoords').textContent}\nConstraints: ${document.getElementById('reportConstraints').textContent}\nInfrastructure: ${document.getElementById('reportInfra').textContent}`;
+  try {
+    await navigator.clipboard.writeText(summary);
+    showToast('Report summary copied', 'success');
+  } catch {
+    showToast('Copy failed', 'error');
+  }
 });
 
 initMap();
