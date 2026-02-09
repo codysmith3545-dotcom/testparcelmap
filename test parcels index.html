@@ -311,6 +311,55 @@
         <div class="layer-toggle-switch on"></div>
       </div>
       <div class="layer-meta">HIFLD national railroads</div>
+
+      <div class="layer-item" data-layer="highways" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #60a5fa;"></div>
+        <span class="layer-name">Interstates + US Highways</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">HIFLD highway network</div>
+
+      <div class="layer-item" data-layer="road-centerlines" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #94a3b8;"></div>
+        <span class="layer-name">Road Centerlines</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">State & local centerlines</div>
+
+      <div class="layer-item" data-layer="traffic-counts" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #fb7185;"></div>
+        <span class="layer-name">Traffic Counts (AADT)</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">AADT stations & segments</div>
+
+      <div class="layer-item" data-layer="bridges" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #f43f5e;"></div>
+        <span class="layer-name">Bridges</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">Bridge inventory</div>
+
+      <div class="layer-item" data-layer="rail-yards" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #2dd4bf;"></div>
+        <span class="layer-name">Rail Yards & Intermodal</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">Intermodal facilities</div>
+
+      <div class="layer-item" data-layer="airports" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #38bdf8;"></div>
+        <span class="layer-name">Airports & Heliports</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">FAA + HIFLD airports</div>
+
+      <div class="layer-item" data-layer="ports" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #22c55e;"></div>
+        <span class="layer-name">Ports & River Terminals</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">Port/terminal facilities</div>
     </div>
   </div>
 
@@ -357,6 +406,13 @@
     <div class="legend-row"><div class="legend-line" style="background:#f5c542;height:4px;"></div> Transmission Line</div>
     <div class="legend-row"><div class="legend-line" style="background:#f59e42;"></div> Gas Pipeline</div>
     <div class="legend-row"><div class="legend-line" style="background:#a78bfa;height:2px;"></div> Railroad</div>
+    <div class="legend-row"><div class="legend-line" style="background:#60a5fa;height:3px;"></div> Interstate / US Highway</div>
+    <div class="legend-row"><div class="legend-line" style="background:#94a3b8;height:2px;"></div> Road Centerline</div>
+    <div class="legend-row"><div class="legend-line" style="background:#fb7185;height:6px;border-radius:999px;"></div> Traffic Count</div>
+    <div class="legend-row"><div class="legend-line" style="background:#f43f5e;height:6px;border-radius:999px;"></div> Bridge</div>
+    <div class="legend-row"><div class="legend-line" style="background:#2dd4bf;height:6px;border-radius:2px;"></div> Rail Yard</div>
+    <div class="legend-row"><div class="legend-line" style="background:#38bdf8;height:6px;border-radius:999px;"></div> Airport / Heliport</div>
+    <div class="legend-row"><div class="legend-line" style="background:#22c55e;height:6px;border-radius:999px;"></div> Port / River Terminal</div>
     <div class="legend-row"><div class="legend-fill" style="background:rgba(59,130,246,0.4);"></div> Flood Zone</div>
     <div class="legend-row"><div class="legend-fill" style="background:rgba(20,184,166,0.4);"></div> Wetland</div>
     <div class="legend-row"><div class="legend-line" style="background:rgba(255,255,255,0.3);height:1px;"></div> Parcel Boundary</div>
@@ -505,6 +561,14 @@ function formatAcreage(value) {
   const parsed = Number(value);
   if (Number.isNaN(parsed)) return null;
   return `${parsed.toFixed(2)} ac`;
+}
+
+function pickProp(props, keys) {
+  for (const key of keys) {
+    const value = props?.[key];
+    if (value !== undefined && value !== null && value !== '') return value;
+  }
+  return null;
 }
 
 function getParcelDetails(properties, sourceLabel) {
@@ -914,6 +978,256 @@ async function addVectorLayers() {
     layerState['railroads'] = { mapLayers: ['railroads'] };
     showToast('✓ Railroads loaded', 'success');
   } catch(e) { console.error('Rail:', e); showToast('✗ Railroads failed', 'error'); }
+
+  // ── Interstates + US Highways ── (HIFLD)
+  try {
+    const interstateUrl = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Interstate_Highways/FeatureServer/0';
+    const usHighwayUrl = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/US_Highways/FeatureServer/0';
+    const [interstateResult, usHighwayResult] = await Promise.allSettled([
+      queryFeatures(interstateUrl, { bbox: IN_BBOX, outFields: 'ROUTE,ROUTE_ID,ROUTE_NUM,ROUTE_TYPE,CLASS,STATE', limit: 5000 }),
+      queryFeatures(usHighwayUrl, { bbox: IN_BBOX, outFields: 'ROUTE,ROUTE_ID,ROUTE_NUM,ROUTE_TYPE,CLASS,STATE', limit: 5000 }),
+    ]);
+    const features = [];
+    if (interstateResult.status === 'fulfilled') features.push(...(interstateResult.value.features || []));
+    if (usHighwayResult.status === 'fulfilled') features.push(...(usHighwayResult.value.features || []));
+    if (!features.length) throw new Error('No highway features returned');
+    map.addSource('highways', { type: 'geojson', data: { type: 'FeatureCollection', features } });
+    map.addLayer({
+      id: 'highways', type: 'line', source: 'highways',
+      paint: {
+        'line-color': '#60a5fa',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1.2, 11, 2.4, 15, 3.6],
+        'line-opacity': 0.85,
+      }
+    });
+    map.on('click', 'highways', (e) => {
+      if (!e.features.length) return;
+      const p = e.features[0].properties || {};
+      const routeName = pickProp(p, ['ROUTE', 'ROUTE_ID', 'ROUTE_NUM', 'ROUTE_NUMBER', 'HWY_NUM']);
+      const routeClass = pickProp(p, ['ROUTE_TYPE', 'CLASS', 'ROUTE_CLASS', 'RTTYP']);
+      const state = pickProp(p, ['STATE', 'STATEAB']);
+      showPopup(e.lngLat, `
+        <div class="popup-title">🛣️ Interstate / US Highway</div>
+        <div class="popup-row"><span class="popup-label">Route</span><span class="popup-value">${routeName || 'Unknown'}</span></div>
+        <div class="popup-row"><span class="popup-label">Class</span><span class="popup-value">${routeClass || 'N/A'}</span></div>
+        ${state ? `<div class="popup-row"><span class="popup-label">State</span><span class="popup-value">${state}</span></div>` : ''}
+      `);
+    });
+    map.on('mouseenter', 'highways', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'highways', () => map.getCanvas().style.cursor = '');
+    layerState['highways'] = { mapLayers: ['highways'] };
+    showToast('✓ Interstates & US Highways loaded', 'success');
+  } catch(e) { console.error('Highways:', e); showToast('✗ Highways failed', 'error'); }
+
+  // ── Road Centerlines ── (state/local)
+  try {
+    const url = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Major_Roads/FeatureServer/0';
+    const data = await queryFeatures(url, { bbox: IN_BBOX, outFields: 'FULLNAME,NAME,ROUTE,CLASS,FUNC_CLASS', limit: 8000 });
+    map.addSource('road-centerlines', { type: 'geojson', data });
+    map.addLayer({
+      id: 'road-centerlines', type: 'line', source: 'road-centerlines',
+      paint: {
+        'line-color': '#94a3b8',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.6, 11, 1.2, 15, 2.2],
+        'line-opacity': 0.7,
+      }
+    });
+    map.on('click', 'road-centerlines', (e) => {
+      if (!e.features.length) return;
+      const p = e.features[0].properties || {};
+      const name = pickProp(p, ['FULLNAME', 'NAME', 'ROUTE']);
+      const funcClass = pickProp(p, ['FUNC_CLASS', 'CLASS']);
+      showPopup(e.lngLat, `
+        <div class="popup-title">🧭 Road Centerline</div>
+        <div class="popup-row"><span class="popup-label">Name</span><span class="popup-value">${name || 'Unnamed'}</span></div>
+        <div class="popup-row"><span class="popup-label">Class</span><span class="popup-value">${funcClass || 'N/A'}</span></div>
+      `);
+    });
+    map.on('mouseenter', 'road-centerlines', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'road-centerlines', () => map.getCanvas().style.cursor = '');
+    layerState['road-centerlines'] = { mapLayers: ['road-centerlines'] };
+    showToast('✓ Road centerlines loaded', 'success');
+  } catch(e) { console.error('Centerlines:', e); showToast('✗ Road centerlines failed', 'error'); }
+
+  // ── Traffic Counts (AADT) ──
+  try {
+    const url = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Traffic_Count_Stations/FeatureServer/0';
+    const data = await queryFeatures(url, { bbox: IN_BBOX, outFields: 'AADT,AADT_2022,AADT_2021,AADT_2020,ROAD_NAME,ROUTE,COUNTYEAR,COUNT_YEAR', limit: 6000 });
+    const aadtExpr = ['coalesce', ['get', 'AADT'], ['get', 'AADT_2022'], ['get', 'AADT_2021'], ['get', 'AADT_2020'], 0];
+    map.addSource('traffic-counts', { type: 'geojson', data });
+    map.addLayer({
+      id: 'traffic-counts', type: 'circle', source: 'traffic-counts',
+      paint: {
+        'circle-color': [
+          'step',
+          aadtExpr,
+          '#fda4af',
+          5000, '#fb7185',
+          15000, '#f43f5e',
+          30000, '#e11d48'
+        ],
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 6, 2, 11, 4.5, 14, 7],
+        'circle-opacity': 0.85,
+        'circle-stroke-color': 'rgba(255,255,255,0.5)',
+        'circle-stroke-width': 0.6,
+      }
+    });
+    map.on('click', 'traffic-counts', (e) => {
+      if (!e.features.length) return;
+      const p = e.features[0].properties || {};
+      const aadt = pickProp(p, ['AADT', 'AADT_2022', 'AADT_2021', 'AADT_2020']);
+      const roadName = pickProp(p, ['ROAD_NAME', 'ROUTE', 'FULLNAME', 'NAME']);
+      const year = pickProp(p, ['COUNTYEAR', 'COUNT_YEAR', 'YEAR']);
+      showPopup(e.lngLat, `
+        <div class="popup-title">🚦 Traffic Count</div>
+        <div class="popup-row"><span class="popup-label">Road</span><span class="popup-value">${roadName || 'Unknown'}</span></div>
+        <div class="popup-row"><span class="popup-label">AADT</span><span class="popup-value">${aadt ? Number(aadt).toLocaleString() : 'N/A'}</span></div>
+        ${year ? `<div class="popup-row"><span class="popup-label">Count Year</span><span class="popup-value">${year}</span></div>` : ''}
+      `);
+    });
+    map.on('mouseenter', 'traffic-counts', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'traffic-counts', () => map.getCanvas().style.cursor = '');
+    layerState['traffic-counts'] = { mapLayers: ['traffic-counts'] };
+    showToast('✓ Traffic counts loaded', 'success');
+  } catch(e) { console.error('AADT:', e); showToast('✗ Traffic counts failed', 'error'); }
+
+  // ── Bridges ──
+  try {
+    const url = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Bridges/FeatureServer/0';
+    const data = await queryFeatures(url, { bbox: IN_BBOX, outFields: 'STRUCTURE_NUMBER,BRIDGE_ID,BRIDGE_NAME,FEATURE_CARRIED,STATUS', limit: 6000 });
+    map.addSource('bridges', { type: 'geojson', data });
+    map.addLayer({
+      id: 'bridges', type: 'circle', source: 'bridges',
+      paint: {
+        'circle-color': '#f43f5e',
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 6, 2.2, 12, 4.5, 15, 6.5],
+        'circle-opacity': 0.85,
+        'circle-stroke-color': 'rgba(0,0,0,0.4)',
+        'circle-stroke-width': 0.7,
+      }
+    });
+    map.on('click', 'bridges', (e) => {
+      if (!e.features.length) return;
+      const p = e.features[0].properties || {};
+      const bridgeId = pickProp(p, ['STRUCTURE_NUMBER', 'BRIDGE_ID']);
+      const name = pickProp(p, ['BRIDGE_NAME', 'FEATURE_CARRIED']);
+      const status = pickProp(p, ['STATUS', 'BRIDGE_STATUS']);
+      showPopup(e.lngLat, `
+        <div class="popup-title">🌉 Bridge</div>
+        <div class="popup-row"><span class="popup-label">Bridge ID</span><span class="popup-value">${bridgeId || 'N/A'}</span></div>
+        ${name ? `<div class="popup-row"><span class="popup-label">Name</span><span class="popup-value">${name}</span></div>` : ''}
+        ${status ? `<div class="popup-row"><span class="popup-label">Status</span><span class="popup-value">${status}</span></div>` : ''}
+      `);
+    });
+    map.on('mouseenter', 'bridges', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'bridges', () => map.getCanvas().style.cursor = '');
+    layerState['bridges'] = { mapLayers: ['bridges'] };
+    showToast('✓ Bridges loaded', 'success');
+  } catch(e) { console.error('Bridges:', e); showToast('✗ Bridges failed', 'error'); }
+
+  // ── Rail Yards / Intermodal Facilities ──
+  try {
+    const url = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Intermodal_Facilities/FeatureServer/0';
+    const data = await queryFeatures(url, { bbox: IN_BBOX, outFields: 'FACILITY_NAME,OPERATOR,TYPE,TYPE_OF_TERMINAL', limit: 4000 });
+    map.addSource('rail-yards', { type: 'geojson', data });
+    map.addLayer({
+      id: 'rail-yards', type: 'circle', source: 'rail-yards',
+      paint: {
+        'circle-color': '#2dd4bf',
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 6, 2.2, 12, 5, 15, 7],
+        'circle-opacity': 0.85,
+        'circle-stroke-color': 'rgba(255,255,255,0.4)',
+        'circle-stroke-width': 0.6,
+      }
+    });
+    map.on('click', 'rail-yards', (e) => {
+      if (!e.features.length) return;
+      const p = e.features[0].properties || {};
+      const name = pickProp(p, ['FACILITY_NAME', 'NAME']);
+      const operator = pickProp(p, ['OPERATOR', 'OWNER']);
+      const type = pickProp(p, ['TYPE_OF_TERMINAL', 'TYPE']);
+      showPopup(e.lngLat, `
+        <div class="popup-title">🚛 Rail Yard / Intermodal</div>
+        <div class="popup-row"><span class="popup-label">Facility</span><span class="popup-value">${name || 'Unknown'}</span></div>
+        ${operator ? `<div class="popup-row"><span class="popup-label">Operator</span><span class="popup-value">${operator}</span></div>` : ''}
+        ${type ? `<div class="popup-row"><span class="popup-label">Type</span><span class="popup-value">${type}</span></div>` : ''}
+      `);
+    });
+    map.on('mouseenter', 'rail-yards', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'rail-yards', () => map.getCanvas().style.cursor = '');
+    layerState['rail-yards'] = { mapLayers: ['rail-yards'] };
+    showToast('✓ Rail yards loaded', 'success');
+  } catch(e) { console.error('Rail yards:', e); showToast('✗ Rail yards failed', 'error'); }
+
+  // ── Airports / Heliports ──
+  try {
+    const url = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Airports/FeatureServer/0';
+    const data = await queryFeatures(url, { bbox: IN_BBOX, outFields: 'AIRPORT_ID,FAA_CODE,LOCID,AIRPORT_NAME,NAME,TYPE', limit: 5000 });
+    map.addSource('airports', { type: 'geojson', data });
+    map.addLayer({
+      id: 'airports', type: 'circle', source: 'airports',
+      paint: {
+        'circle-color': '#38bdf8',
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 6, 2, 12, 4.5, 15, 6.5],
+        'circle-opacity': 0.85,
+        'circle-stroke-color': 'rgba(0,0,0,0.4)',
+        'circle-stroke-width': 0.7,
+      }
+    });
+    map.on('click', 'airports', (e) => {
+      if (!e.features.length) return;
+      const p = e.features[0].properties || {};
+      const name = pickProp(p, ['AIRPORT_NAME', 'NAME']);
+      const airportId = pickProp(p, ['AIRPORT_ID', 'FAA_CODE', 'LOCID']);
+      const type = pickProp(p, ['TYPE', 'FACILITY_TYPE']);
+      showPopup(e.lngLat, `
+        <div class="popup-title">✈️ Airport / Heliport</div>
+        <div class="popup-row"><span class="popup-label">Name</span><span class="popup-value">${name || 'Unknown'}</span></div>
+        <div class="popup-row"><span class="popup-label">Airport ID</span><span class="popup-value">${airportId || 'N/A'}</span></div>
+        ${type ? `<div class="popup-row"><span class="popup-label">Type</span><span class="popup-value">${type}</span></div>` : ''}
+      `);
+    });
+    map.on('mouseenter', 'airports', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'airports', () => map.getCanvas().style.cursor = '');
+    layerState['airports'] = { mapLayers: ['airports'] };
+    showToast('✓ Airports loaded', 'success');
+  } catch(e) { console.error('Airports:', e); showToast('✗ Airports failed', 'error'); }
+
+  // ── Ports / River Terminals ──
+  try {
+    const url = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Ports/FeatureServer/0';
+    const data = await queryFeatures(url, { bbox: IN_BBOX, outFields: 'PORT_NAME,NAME,OPERATOR,TYPE,PORT_ID', limit: 3000 });
+    map.addSource('ports', { type: 'geojson', data });
+    map.addLayer({
+      id: 'ports', type: 'circle', source: 'ports',
+      paint: {
+        'circle-color': '#22c55e',
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 6, 2, 12, 4.5, 15, 6.5],
+        'circle-opacity': 0.85,
+        'circle-stroke-color': 'rgba(0,0,0,0.4)',
+        'circle-stroke-width': 0.7,
+      }
+    });
+    map.on('click', 'ports', (e) => {
+      if (!e.features.length) return;
+      const p = e.features[0].properties || {};
+      const name = pickProp(p, ['PORT_NAME', 'NAME']);
+      const portId = pickProp(p, ['PORT_ID', 'ID']);
+      const operator = pickProp(p, ['OPERATOR', 'OWNER']);
+      const type = pickProp(p, ['TYPE', 'PORT_TYPE']);
+      showPopup(e.lngLat, `
+        <div class="popup-title">⚓ Port / River Terminal</div>
+        <div class="popup-row"><span class="popup-label">Facility</span><span class="popup-value">${name || 'Unknown'}</span></div>
+        ${portId ? `<div class="popup-row"><span class="popup-label">Port ID</span><span class="popup-value">${portId}</span></div>` : ''}
+        ${operator ? `<div class="popup-row"><span class="popup-label">Operator</span><span class="popup-value">${operator}</span></div>` : ''}
+        ${type ? `<div class="popup-row"><span class="popup-label">Type</span><span class="popup-value">${type}</span></div>` : ''}
+      `);
+    });
+    map.on('mouseenter', 'ports', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'ports', () => map.getCanvas().style.cursor = '');
+    layerState['ports'] = { mapLayers: ['ports'] };
+    showToast('✓ Ports loaded', 'success');
+  } catch(e) { console.error('Ports:', e); showToast('✗ Ports failed', 'error'); }
 
   // ── Parcel Vector (IndianaMap FeatureServer) ──
   try {
