@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<title>Indiana Dev Intel — Development Feasibility Intelligence</title>
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #0a0e17;
+    --bg-secondary: #111827;
+    --bg-tertiary: #1a2234;
+    --bg-hover: #243049;
+    --border: #2a3a52;
+    --text-primary: #e8edf5;
+    --text-secondary: #8b9dc3;
+    --text-muted: #5a6f94;
+    --accent-green: #22d3a7;
+    --accent-yellow: #f5c542;
+    --accent-orange: #f59e42;
+    --accent-blue: #3b82f6;
+    --accent-red: #ef4444;
+    --accent-teal: #14b8a6;
+    --accent-purple: #a78bfa;
+    --radius: 8px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.5);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg-primary); color: var(--text-primary); overflow: hidden; height: 100vh; width: 100vw; }
+  #map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+
+  /* Popup */
+  .maplibregl-popup-content {
+    background: var(--bg-secondary) !important; color: var(--text-primary) !important;
+    border: 1px solid var(--border) !important; border-radius: var(--radius) !important;
+    padding: 14px !important; font-family: 'DM Sans', sans-serif !important;
+    box-shadow: var(--shadow) !important; max-width: 320px !important; font-size: 13px !important;
+  }
+  .maplibregl-popup-tip { border-top-color: var(--bg-secondary) !important; }
+  .maplibregl-popup-close-button { color: var(--text-secondary) !important; font-size: 20px !important; right: 6px !important; top: 2px !important; }
+  .maplibregl-ctrl-group { background: var(--bg-secondary) !important; border: 1px solid var(--border) !important; border-radius: 6px !important; }
+  .maplibregl-ctrl-group button { background: transparent !important; }
+  .maplibregl-ctrl-group button .maplibregl-ctrl-icon { filter: invert(1); }
+  .maplibregl-ctrl-attrib { background: rgba(10,14,23,0.7) !important; color: var(--text-muted) !important; font-size: 10px !important; }
+  .maplibregl-ctrl-attrib a { color: var(--text-secondary) !important; }
+
+  /* Header */
+  .header {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 10; height: 52px;
+    background: rgba(10,14,23,0.95); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 14px; gap: 12px;
+  }
+  .logo {
+    font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 14px;
+    color: var(--accent-green); white-space: nowrap; display: flex; align-items: center; gap: 7px;
+  }
+  .logo-icon {
+    width: 26px; height: 26px; background: var(--accent-green); border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: var(--bg-primary); font-weight: 700;
+  }
+  .search-bar { flex: 1; max-width: 420px; position: relative; }
+  .search-bar input {
+    width: 100%; height: 34px; background: var(--bg-tertiary); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text-primary); font-family: 'DM Sans', sans-serif;
+    font-size: 13px; padding: 0 10px 0 32px; outline: none; transition: border-color 0.2s;
+  }
+  .search-bar input:focus { border-color: var(--accent-green); }
+  .search-bar input::placeholder { color: var(--text-muted); }
+  .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 13px; pointer-events: none; }
+  .header-zoom {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted);
+    margin-left: auto; white-space: nowrap;
+  }
+  .header-zoom .val { color: var(--text-primary); font-weight: 600; }
+
+  /* Sidebar */
+  .sidebar {
+    position: absolute; top: 52px; left: 0; bottom: 0; width: 280px; z-index: 5;
+    background: rgba(10,14,23,0.96); backdrop-filter: blur(12px);
+    border-right: 1px solid var(--border); overflow-y: auto; transition: transform 0.3s ease;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sidebar.collapsed { transform: translateX(-280px); }
+  .sidebar-toggle {
+    position: absolute; top: 60px; z-index: 6; left: 280px;
+    width: 26px; height: 44px; background: var(--bg-secondary); border: 1px solid var(--border);
+    border-left: none; border-radius: 0 6px 6px 0; color: var(--text-secondary);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; transition: left 0.3s ease;
+  }
+  .sidebar.collapsed + .sidebar-toggle { left: 0; }
+
+  .section { padding: 14px; border-bottom: 1px solid var(--border); }
+  .section-title {
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;
+  }
+  .layer-group { display: flex; flex-direction: column; gap: 2px; }
+  .layer-item {
+    display: flex; align-items: center; gap: 9px; padding: 7px 8px;
+    border-radius: 5px; cursor: pointer; transition: background 0.15s; user-select: none;
+  }
+  .layer-item:hover { background: var(--bg-hover); }
+  .layer-swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .layer-name { font-size: 12.5px; font-weight: 500; color: var(--text-primary); flex: 1; }
+  .layer-toggle-switch {
+    width: 30px; height: 16px; background: var(--bg-tertiary); border-radius: 8px;
+    position: relative; transition: background 0.2s; flex-shrink: 0; border: 1px solid var(--border);
+  }
+  .layer-toggle-switch.on { background: var(--accent-green); border-color: var(--accent-green); }
+  .layer-toggle-switch::after {
+    content: ''; position: absolute; width: 10px; height: 10px; border-radius: 50%;
+    background: white; top: 2px; left: 2px; transition: transform 0.2s;
+  }
+  .layer-toggle-switch.on::after { transform: translateX(14px); }
+  .layer-item.disabled .layer-name { color: var(--text-muted); }
+  .layer-meta {
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-muted);
+    padding: 1px 8px 4px 29px;
+  }
+
+  /* Legend */
+  .legend-row { display: flex; align-items: center; gap: 8px; padding: 3px 8px; font-size: 11px; color: var(--text-secondary); }
+  .legend-line { width: 18px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+  .legend-fill { width: 14px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  /* Loading */
+  .loading-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-primary);
+    z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; transition: opacity 0.5s ease;
+  }
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .loading-spinner {
+    width: 36px; height: 36px; border: 3px solid var(--border);
+    border-top-color: var(--accent-green); border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-secondary); }
+
+  /* Toasts */
+  .toast-container {
+    position: absolute; bottom: 20px; right: 14px; z-index: 20;
+    display: flex; flex-direction: column; gap: 6px; max-width: 300px;
+  }
+  .toast {
+    background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 8px 12px; font-size: 11px; color: var(--text-secondary);
+    display: flex; align-items: center; gap: 6px; animation: slideIn 0.3s ease; box-shadow: var(--shadow);
+  }
+  .toast.success { border-left: 3px solid var(--accent-green); }
+  .toast.error { border-left: 3px solid var(--accent-red); }
+  .toast.info { border-left: 3px solid var(--accent-blue); }
+  @keyframes slideIn { from { transform: translateX(16px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* Popup content */
+  .popup-title {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;
+    color: var(--accent-green); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .popup-row {
+    display: flex; justify-content: space-between; padding: 3px 0; font-size: 11.5px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .popup-row:last-child { border-bottom: none; }
+  .popup-label { color: var(--text-muted); }
+  .popup-value { color: var(--text-primary); font-weight: 500; text-align: right; max-width: 180px; }
+  .popup-badge {
+    display: inline-block; padding: 2px 6px; border-radius: 3px;
+    font-size: 10px; font-family: 'JetBrains Mono', monospace; font-weight: 600;
+  }
+  .badge-electric { background: rgba(245,197,66,0.15); color: var(--accent-yellow); }
+  .badge-gas { background: rgba(245,158,66,0.15); color: var(--accent-orange); }
+
+  .info-hint {
+    background: var(--bg-tertiary); border-radius: 5px; padding: 9px 10px;
+    font-size: 10.5px; color: var(--text-muted); line-height: 1.5;
+  }
+  .info-hint strong { color: var(--text-secondary); }
+
+  .coord-display {
+    position: absolute; bottom: 6px; left: 288px; z-index: 5;
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-muted);
+    background: rgba(10,14,23,0.8); padding: 3px 8px; border-radius: 3px; pointer-events: none;
+  }
+  .sidebar.collapsed ~ .coord-display { left: 6px; }
+
+  @media (max-width: 768px) {
+    .sidebar { width: 260px; }
+    .sidebar-toggle { left: 260px; }
+    .sidebar.collapsed + .sidebar-toggle { left: 0; }
+    .header-zoom { display: none; }
+    .search-bar { max-width: 180px; }
+    .coord-display { left: 268px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Loading Indiana Dev Intel…</div>
+</div>
+
+<div class="header">
+  <div class="logo"><div class="logo-icon">⬡</div>IN DEV INTEL</div>
+  <div class="search-bar">
+    <span class="search-icon">⌕</span>
+    <input type="text" id="searchInput" placeholder="Search address…" />
+  </div>
+  <div class="header-zoom">Z <span class="val" id="zoomLevel">7.0</span></div>
+</div>
+
+<div class="sidebar" id="sidebar">
+  <div class="section">
+    <div class="section-title">Infrastructure</div>
+    <div class="layer-group">
+      <div class="layer-item" data-layer="transmission-lines" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #f5c542;"></div>
+        <span class="layer-name">Electric Transmission</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">HIFLD national dataset</div>
+
+      <div class="layer-item" data-layer="gas-pipelines" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #f59e42;"></div>
+        <span class="layer-name">Natural Gas Pipelines</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">EIA Interstate & Intrastate</div>
+
+      <div class="layer-item" data-layer="railroads" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #a78bfa;"></div>
+        <span class="layer-name">Rail Lines</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">HIFLD national railroads</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Constraints</div>
+    <div class="layer-group">
+      <div class="layer-item" data-layer="flood-zones" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #3b82f6;"></div>
+        <span class="layer-name">FEMA Flood Zones</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">National Flood Hazard Layer</div>
+
+      <div class="layer-item" data-layer="wetlands" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #14b8a6;"></div>
+        <span class="layer-name">NWI Wetlands</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">US Fish & Wildlife — zoom 11+</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Reference</div>
+    <div class="layer-group">
+      <div class="layer-item" data-layer="parcels" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: rgba(255,255,255,0.35);"></div>
+        <span class="layer-name">Parcel Boundaries</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">IndianaMap — zoom 14+</div>
+
+      <div class="layer-item" data-layer="plss" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: rgba(255,255,255,0.2);"></div>
+        <span class="layer-name">PLSS Sections</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">Twp / Range / Section — zoom 11+</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Legend</div>
+    <div class="legend-row"><div class="legend-line" style="background:#f5c542;height:4px;"></div> Transmission Line</div>
+    <div class="legend-row"><div class="legend-line" style="background:#f59e42;"></div> Gas Pipeline</div>
+    <div class="legend-row"><div class="legend-line" style="background:#a78bfa;height:2px;"></div> Railroad</div>
+    <div class="legend-row"><div class="legend-fill" style="background:rgba(59,130,246,0.4);"></div> Flood Zone</div>
+    <div class="legend-row"><div class="legend-fill" style="background:rgba(20,184,166,0.4);"></div> Wetland</div>
+    <div class="legend-row"><div class="legend-line" style="background:rgba(255,255,255,0.3);height:1px;"></div> Parcel Boundary</div>
+  </div>
+
+  <div class="section">
+    <div class="info-hint">
+      <strong>Tip:</strong> Zoom to 14+ for parcel boundaries. Tap any transmission line or pipeline for details. All layers pull live from federal & state GIS services.
+    </div>
+  </div>
+</div>
+
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">◀</button>
+<div class="coord-display" id="coordDisplay">39.77°N, 86.16°W</div>
+<div id="map"></div>
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+const layerState = {};
+let map, popup;
+
+function showToast(msg, type='info') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity 0.3s'; setTimeout(()=>t.remove(),300); }, 3500);
+}
+
+function showPopup(lngLat, html) {
+  if (popup) popup.remove();
+  popup = new maplibregl.Popup({ closeButton: true, maxWidth: '320px' }).setLngLat(lngLat).setHTML(html).addTo(map);
+}
+
+// ── ArcGIS Feature Service query (for CORS-enabled services) ──
+async function queryFeatures(url, opts = {}) {
+  const params = new URLSearchParams({
+    where: opts.where || '1=1',
+    outFields: opts.outFields || '*',
+    f: 'geojson',
+    returnGeometry: 'true',
+    outSR: '4326',
+    resultRecordCount: opts.limit || 3000,
+  });
+  if (opts.bbox) {
+    params.set('geometry', opts.bbox);
+    params.set('geometryType', 'esriGeometryEnvelope');
+    params.set('spatialRel', 'esriSpatialRelIntersects');
+    params.set('inSR', '4326');
+  }
+  const res = await fetch(`${url}/query?${params}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+const IN_BBOX = '-88.1,37.77,-84.78,41.76';
+
+// ──────────────────────────────────
+// MAP INIT
+// ──────────────────────────────────
+function initMap() {
+  map = new maplibregl.Map({
+    container: 'map',
+    style: {
+      version: 8,
+      sources: {
+        'carto-dark': {
+          type: 'raster',
+          tiles: ['https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png'],
+          tileSize: 256,
+          attribution: '© CARTO © OSM'
+        }
+      },
+      layers: [{ id: 'base', type: 'raster', source: 'carto-dark' }],
+      glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf'
+    },
+    center: [-86.1581, 39.7684],
+    zoom: 7,
+    maxBounds: [[-89.5, 37.0], [-83.0, 42.5]],
+  });
+
+  map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+  map.on('zoom', () => {
+    document.getElementById('zoomLevel').textContent = map.getZoom().toFixed(1);
+  });
+  map.on('mousemove', (e) => {
+    const {lng, lat} = e.lngLat;
+    document.getElementById('coordDisplay').textContent =
+      `${Math.abs(lat).toFixed(2)}°${lat>=0?'N':'S'}, ${Math.abs(lng).toFixed(2)}°${lng>=0?'E':'W'}`;
+  });
+
+  map.on('load', () => {
+    addRasterLayers();
+    addVectorLayers();
+    setTimeout(() => document.getElementById('loading').classList.add('hidden'), 1200);
+  });
+}
+
+// ──────────────────────────────────
+// RASTER TILE LAYERS (no CORS issues — browser loads tiles like images)
+// ──────────────────────────────────
+function addRasterLayers() {
+
+  // ── FEMA Flood Zones (National Flood Hazard Layer MapServer) ──
+  map.addSource('flood-zones', {
+    type: 'raster',
+    tiles: [
+      'https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer/export?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=512,512&format=png32&transparent=true&f=image&layers=show:28'
+    ],
+    tileSize: 512,
+    minzoom: 9,
+    maxzoom: 18,
+  });
+  map.addLayer({
+    id: 'flood-zones', type: 'raster', source: 'flood-zones',
+    paint: { 'raster-opacity': 0.55 },
+    minzoom: 9,
+  });
+  layerState['flood-zones'] = { mapLayers: ['flood-zones'] };
+  showToast('✓ FEMA Flood Zones ready (zoom 9+)', 'success');
+
+  // ── NWI Wetlands (FWS MapServer export) ──
+  map.addSource('wetlands', {
+    type: 'raster',
+    tiles: [
+      'https://fwspublicservices.wim.usgs.gov/wetlandsmapservice/rest/services/Wetlands/MapServer/export?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=512,512&format=png32&transparent=true&f=image&layers=show:0,1'
+    ],
+    tileSize: 512,
+    minzoom: 11,
+    maxzoom: 18,
+  });
+  map.addLayer({
+    id: 'wetlands', type: 'raster', source: 'wetlands',
+    paint: { 'raster-opacity': 0.6 },
+    minzoom: 11,
+  });
+  layerState['wetlands'] = { mapLayers: ['wetlands'] };
+  showToast('✓ NWI Wetlands ready (zoom 11+)', 'success');
+
+  // ── Indiana Parcels (IndianaMap MapServer as tiles) ──
+  map.addSource('parcels', {
+    type: 'raster',
+    tiles: [
+      'https://gisdata.in.gov/server/rest/services/Hosted/Parcel_Boundaries_of_Indiana_Current/FeatureServer/0/query?where=1%3D1&outFields=&f=pbf&returnGeometry=true'
+    ].length ? [
+      // Use the IndianaMap map image export for parcels
+      'https://gis.in.gov/arcgis/rest/services/Infrastructure/Parcels_Current/MapServer/export?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=512,512&format=png32&transparent=true&f=image&layers=show:0'
+    ] : [],
+    tileSize: 512,
+    minzoom: 14,
+    maxzoom: 20,
+  });
+  map.addLayer({
+    id: 'parcels', type: 'raster', source: 'parcels',
+    paint: { 'raster-opacity': 0.75 },
+    minzoom: 14,
+  });
+  layerState['parcels'] = { mapLayers: ['parcels'] };
+  showToast('✓ Parcel boundaries ready (zoom 14+)', 'success');
+
+  // ── PLSS (DNR MapServer) ──
+  map.addSource('plss', {
+    type: 'raster',
+    tiles: [
+      'https://gisq.in.gov/arcgis/rest/services/DNR/PLSS_Indiana/MapServer/export?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=512,512&format=png32&transparent=true&f=image&layers=show:0,1,2,3,4,5,6'
+    ],
+    tileSize: 512,
+    minzoom: 11,
+    maxzoom: 18,
+  });
+  map.addLayer({
+    id: 'plss', type: 'raster', source: 'plss',
+    paint: { 'raster-opacity': 0.45 },
+    minzoom: 11,
+  });
+  layerState['plss'] = { mapLayers: ['plss'] };
+  showToast('✓ PLSS Sections ready (zoom 11+)', 'success');
+}
+
+// ──────────────────────────────────
+// VECTOR LAYERS (CORS-enabled HIFLD services on ArcGIS Online)
+// ──────────────────────────────────
+async function addVectorLayers() {
+
+  // ── Electric Transmission Lines ── (confirmed working)
+  try {
+    const url = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Electric_Power_Transmission_Lines/FeatureServer/0';
+    const data = await queryFeatures(url, { bbox: IN_BBOX, outFields: 'OWNER,VOLTAGE,VOLT_CLASS,STATUS,SUB_1,SUB_2', limit: 5000 });
+    map.addSource('transmission-lines', { type: 'geojson', data });
+    map.addLayer({
+      id: 'transmission-lines', type: 'line', source: 'transmission-lines',
+      paint: {
+        'line-color': '#f5c542',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1.2, 12, 3, 16, 5],
+        'line-opacity': 0.8,
+      }
+    });
+    map.on('click', 'transmission-lines', (e) => {
+      if (!e.features.length) return;
+      const p = e.features[0].properties;
+      showPopup(e.lngLat, `
+        <div class="popup-title">⚡ Transmission Line</div>
+        <div class="popup-row"><span class="popup-label">Owner</span><span class="popup-value">${p.OWNER||'Unknown'}</span></div>
+        <div class="popup-row"><span class="popup-label">Voltage</span><span class="popup-value"><span class="popup-badge badge-electric">${p.VOLTAGE ? p.VOLTAGE+' kV' : p.VOLT_CLASS||'N/A'}</span></span></div>
+        <div class="popup-row"><span class="popup-label">Status</span><span class="popup-value">${p.STATUS||'N/A'}</span></div>
+        ${p.SUB_1 ? `<div class="popup-row"><span class="popup-label">From</span><span class="popup-value">${p.SUB_1}</span></div>` : ''}
+        ${p.SUB_2 ? `<div class="popup-row"><span class="popup-label">To</span><span class="popup-value">${p.SUB_2}</span></div>` : ''}
+      `);
+    });
+    map.on('mouseenter', 'transmission-lines', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'transmission-lines', () => map.getCanvas().style.cursor = '');
+    layerState['transmission-lines'] = { mapLayers: ['transmission-lines'] };
+    showToast('✓ Transmission Lines loaded', 'success');
+  } catch(e) { console.error('Trans:', e); showToast('✗ Transmission Lines failed', 'error'); }
+
+  // ── Natural Gas Pipelines ── (HIFLD on ArcGIS Online — same host as transmission, should have CORS)
+  try {
+    const url = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Natural_Gas_Pipelines/FeatureServer/0';
+    const data = await queryFeatures(url, { bbox: IN_BBOX, outFields: 'Operator,Typepipe,Shape_Length', limit: 5000 });
+    map.addSource('gas-pipelines', { type: 'geojson', data });
+    map.addLayer({
+      id: 'gas-pipelines', type: 'line', source: 'gas-pipelines',
+      paint: {
+        'line-color': '#f59e42',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1, 12, 2.5, 16, 4],
+        'line-opacity': 0.8,
+        'line-dasharray': [6, 2],
+      }
+    });
+    map.on('click', 'gas-pipelines', (e) => {
+      if (!e.features.length) return;
+      const p = e.features[0].properties;
+      showPopup(e.lngLat, `
+        <div class="popup-title">🔥 Natural Gas Pipeline</div>
+        <div class="popup-row"><span class="popup-label">Operator</span><span class="popup-value">${p.Operator||'Unknown'}</span></div>
+        <div class="popup-row"><span class="popup-label">Type</span><span class="popup-value"><span class="popup-badge badge-gas">${p.Typepipe||'Pipeline'}</span></span></div>
+      `);
+    });
+    map.on('mouseenter', 'gas-pipelines', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'gas-pipelines', () => map.getCanvas().style.cursor = '');
+    layerState['gas-pipelines'] = { mapLayers: ['gas-pipelines'] };
+    showToast('✓ Gas Pipelines loaded', 'success');
+  } catch(e) {
+    console.error('Gas:', e);
+    showToast('✗ Gas Pipelines failed — trying alternate…', 'error');
+    // Fallback: use EIA service
+    try {
+      const url2 = 'https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/Natural_Gas_Interstate_and_Intrastate_Pipelines/FeatureServer/0';
+      const data2 = await queryFeatures(url2, { bbox: IN_BBOX, outFields: 'Operator,Typepipe', limit: 5000 });
+      map.addSource('gas-pipelines', { type: 'geojson', data: data2 });
+      map.addLayer({
+        id: 'gas-pipelines', type: 'line', source: 'gas-pipelines',
+        paint: { 'line-color': '#f59e42', 'line-width': 2, 'line-opacity': 0.8, 'line-dasharray': [6, 2] }
+      });
+      layerState['gas-pipelines'] = { mapLayers: ['gas-pipelines'] };
+      showToast('✓ Gas Pipelines loaded (EIA)', 'success');
+    } catch(e2) { console.error('Gas fallback:', e2); showToast('✗ Gas Pipelines unavailable', 'error'); }
+  }
+
+  // ── Railroads ── (HIFLD)
+  try {
+    const url = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Railroads_1/FeatureServer/0';
+    const data = await queryFeatures(url, { bbox: IN_BBOX, outFields: 'RROWNER1,RROWNER2,STATEAB', where: "STATEAB='IN'", limit: 5000 });
+    map.addSource('railroads', { type: 'geojson', data });
+    map.addLayer({
+      id: 'railroads', type: 'line', source: 'railroads',
+      paint: {
+        'line-color': '#a78bfa',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.8, 12, 2],
+        'line-opacity': 0.65,
+        'line-dasharray': [4, 3],
+      }
+    });
+    map.on('click', 'railroads', (e) => {
+      if (!e.features.length) return;
+      const p = e.features[0].properties;
+      showPopup(e.lngLat, `
+        <div class="popup-title">🚂 Railroad</div>
+        <div class="popup-row"><span class="popup-label">Owner</span><span class="popup-value">${p.RROWNER1||'Unknown'}</span></div>
+        ${p.RROWNER2 ? `<div class="popup-row"><span class="popup-label">Owner 2</span><span class="popup-value">${p.RROWNER2}</span></div>` : ''}
+      `);
+    });
+    map.on('mouseenter', 'railroads', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'railroads', () => map.getCanvas().style.cursor = '');
+    layerState['railroads'] = { mapLayers: ['railroads'] };
+    showToast('✓ Railroads loaded', 'success');
+  } catch(e) { console.error('Rail:', e); showToast('✗ Railroads failed', 'error'); }
+}
+
+// ── Toggle Layer ──
+function toggleLayer(el) {
+  const id = el.dataset.layer;
+  const sw = el.querySelector('.layer-toggle-switch');
+  const isOn = sw.classList.contains('on');
+  sw.classList.toggle('on');
+  el.classList.toggle('disabled');
+
+  const state = layerState[id];
+  if (!state) return;
+  state.mapLayers.forEach(lid => {
+    if (map.getLayer(lid)) {
+      map.setLayoutProperty(lid, 'visibility', isOn ? 'none' : 'visible');
+    }
+  });
+}
+
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  sb.classList.toggle('collapsed');
+  document.getElementById('sidebarToggle').textContent = sb.classList.contains('collapsed') ? '▶' : '◀';
+}
+
+// ── Search ──
+document.getElementById('searchInput').addEventListener('keydown', async (e) => {
+  if (e.key !== 'Enter') return;
+  const q = e.target.value.trim();
+  if (!q) return;
+  // Coordinate check
+  const m = q.match(/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/);
+  if (m) { map.flyTo({ center: [parseFloat(m[2]), parseFloat(m[1])], zoom: 15 }); return; }
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+', Indiana, USA')}&format=json&limit=1`);
+    const data = await res.json();
+    if (data.length) {
+      map.flyTo({ center: [parseFloat(data[0].lon), parseFloat(data[0].lat)], zoom: 15 });
+      showToast(`📍 ${data[0].display_name.split(',').slice(0,2).join(',')}`, 'info');
+    } else { showToast('No results found', 'error'); }
+  } catch(err) { showToast('Search failed', 'error'); }
+});
+
+initMap();
+</script>
+</body>
+</html>
