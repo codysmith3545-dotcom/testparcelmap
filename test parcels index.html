@@ -99,6 +99,78 @@
     font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600;
     color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;
   }
+  .section-subtitle {
+    font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;
+  }
+  .detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .detail-card {
+    background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px; font-size: 11px; color: var(--text-secondary);
+  }
+  .detail-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); }
+  .detail-value { margin-top: 4px; font-weight: 600; color: var(--text-primary); }
+  .comps-list { display: flex; flex-direction: column; gap: 6px; }
+  .comp-item {
+    background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px; display: flex; flex-direction: column; gap: 4px;
+  }
+  .comp-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary); }
+  .comp-row strong { color: var(--text-primary); font-weight: 600; }
+  .pipeline-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .pipeline-stage {
+    border: 1px solid var(--border); border-radius: 6px; padding: 7px; cursor: pointer;
+    font-size: 11px; color: var(--text-secondary); background: var(--bg-tertiary); text-align: center;
+    transition: transform 0.15s ease, border-color 0.2s ease, color 0.2s ease;
+  }
+  .pipeline-stage.active {
+    border-color: var(--accent-green); color: var(--text-primary); background: rgba(34,211,167,0.12);
+    transform: translateY(-1px);
+  }
+  .pipeline-stage:hover { border-color: var(--accent-green); }
+  .feasibility-list { display: flex; flex-direction: column; gap: 6px; }
+  .feasibility-item {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px; font-size: 11px; color: var(--text-secondary);
+  }
+  .feasibility-toggle { accent-color: var(--accent-green); }
+  .score-pill {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600;
+    color: var(--accent-green); background: rgba(34,211,167,0.12); border-radius: 999px; padding: 4px 8px;
+  }
+  .aoi-controls { display: flex; gap: 6px; }
+  .aoi-button {
+    flex: 1; background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-secondary);
+    border-radius: 6px; padding: 7px; font-size: 11px; cursor: pointer; transition: border-color 0.2s;
+  }
+  .aoi-button:hover { border-color: var(--accent-green); color: var(--text-primary); }
+  .aoi-list { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .aoi-item {
+    padding: 7px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 11px;
+    background: var(--bg-tertiary); color: var(--text-secondary); cursor: pointer;
+  }
+  .aoi-item:hover { border-color: var(--accent-green); color: var(--text-primary); }
+  .report-button {
+    width: 100%; background: var(--accent-blue); border: none; border-radius: 6px; padding: 8px;
+    font-size: 12px; color: white; cursor: pointer; font-weight: 600;
+  }
+  .report-modal {
+    position: absolute; inset: 0; background: rgba(6,10,16,0.72); display: none; align-items: center;
+    justify-content: center; z-index: 30;
+  }
+  .report-modal.active { display: flex; }
+  .report-card {
+    width: min(420px, 90vw); background: var(--bg-secondary); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow);
+  }
+  .report-card h3 { font-size: 13px; margin-bottom: 10px; }
+  .report-content { font-size: 11px; color: var(--text-secondary); white-space: pre-line; }
+  .report-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .report-actions button {
+    flex: 1; border-radius: 6px; padding: 7px; font-size: 11px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-secondary);
+  }
+  .report-actions button.primary { background: var(--accent-green); border-color: var(--accent-green); color: var(--bg-primary); }
   .layer-group { display: flex; flex-direction: column; gap: 2px; }
   .layer-item {
     display: flex; align-items: center; gap: 9px; padding: 7px 8px;
@@ -291,6 +363,77 @@
   </div>
 
   <div class="section">
+    <div class="section-title">Parcel Details</div>
+    <div class="section-subtitle">Tap a parcel or PLSS section for details.</div>
+    <div class="detail-grid" id="parcelDetails">
+      <div class="detail-card">
+        <div class="detail-label">Owner</div>
+        <div class="detail-value">—</div>
+      </div>
+      <div class="detail-card">
+        <div class="detail-label">Acreage</div>
+        <div class="detail-value">—</div>
+      </div>
+      <div class="detail-card">
+        <div class="detail-label">Zoning</div>
+        <div class="detail-value">—</div>
+      </div>
+      <div class="detail-card">
+        <div class="detail-label">Source</div>
+        <div class="detail-value">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Market Comps</div>
+    <div class="comps-list" id="compsList"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Deal Pipeline</div>
+    <div class="pipeline-grid" id="pipelineStages">
+      <div class="pipeline-stage" data-stage="Lead">Lead</div>
+      <div class="pipeline-stage" data-stage="Underwrite">Underwrite</div>
+      <div class="pipeline-stage" data-stage="DD">DD</div>
+      <div class="pipeline-stage" data-stage="Close">Close</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Feasibility Snapshot</div>
+    <div class="score-pill">Score <span id="feasibilityScore">72</span></div>
+    <div class="feasibility-list" style="margin-top: 8px;">
+      <div class="feasibility-item">
+        <span>Slope sensitivity</span>
+        <input class="feasibility-toggle" type="checkbox" id="slopeToggle" checked />
+      </div>
+      <div class="feasibility-item">
+        <span>Access visibility</span>
+        <input class="feasibility-toggle" type="checkbox" id="accessToggle" checked />
+      </div>
+      <div class="feasibility-item">
+        <span>Utilities proximity</span>
+        <input class="feasibility-toggle" type="checkbox" id="utilitiesToggle" checked />
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">AOI Bookmarks</div>
+    <div class="aoi-controls">
+      <button class="aoi-button" id="saveAoiButton">Save AOI</button>
+      <button class="aoi-button" id="clearAoiButton">Clear</button>
+    </div>
+    <div class="aoi-list" id="aoiList"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Report Export</div>
+    <button class="report-button" id="openReportButton">Generate Report</button>
+  </div>
+
+  <div class="section">
     <div class="info-hint">
       <strong>Tip:</strong> Zoom to 14+ for parcel boundaries. Tap any transmission line or pipeline for details. All layers pull live from federal & state GIS services.
     </div>
@@ -301,10 +444,30 @@
 <div class="coord-display" id="coordDisplay">39.77°N, 86.16°W</div>
 <div id="map"></div>
 <div class="toast-container" id="toastContainer"></div>
+<div class="report-modal" id="reportModal">
+  <div class="report-card">
+    <h3>Export Report Summary</h3>
+    <div class="report-content" id="reportContent">Loading report…</div>
+    <div class="report-actions">
+      <button id="closeReportButton">Close</button>
+      <button class="primary" id="copyReportButton">Copy Summary</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const layerState = {};
 let map, popup;
+const comps = [
+  { id: 1, pricePerAcre: 28500, distanceMiles: 4.2, date: '2024-06-14' },
+  { id: 2, pricePerAcre: 31200, distanceMiles: 8.1, date: '2024-04-22' },
+  { id: 3, pricePerAcre: 26450, distanceMiles: 12.4, date: '2024-02-08' },
+];
+const pipelineStages = ['Lead', 'Underwrite', 'DD', 'Close'];
+
+function track(eventName, payload = {}) {
+  console.log(`[track] ${eventName}`, payload);
+}
 
 function showToast(msg, type='info') {
   const c = document.getElementById('toastContainer');
@@ -318,6 +481,177 @@ function showToast(msg, type='info') {
 function showPopup(lngLat, html) {
   if (popup) popup.remove();
   popup = new maplibregl.Popup({ closeButton: true, maxWidth: '320px' }).setLngLat(lngLat).setHTML(html).addTo(map);
+}
+
+function updateParcelDetails(details) {
+  const container = document.getElementById('parcelDetails');
+  container.innerHTML = '';
+  const rows = [
+    { label: 'Owner', value: details.owner || 'Unknown' },
+    { label: 'Acreage', value: details.acreage || 'N/A' },
+    { label: 'Zoning', value: details.zoning || 'N/A' },
+    { label: 'Source', value: details.source || 'Parcel/PLSS' },
+  ];
+  rows.forEach((row) => {
+    const card = document.createElement('div');
+    card.className = 'detail-card';
+    card.innerHTML = `<div class="detail-label">${row.label}</div><div class="detail-value">${row.value}</div>`;
+    container.appendChild(card);
+  });
+}
+
+function formatAcreage(value) {
+  if (!value && value !== 0) return null;
+  const parsed = Number(value);
+  if (Number.isNaN(parsed)) return null;
+  return `${parsed.toFixed(2)} ac`;
+}
+
+function getParcelDetails(properties, sourceLabel) {
+  const owner = properties.OWNER || properties.OWNER_NAME || properties.NAME || 'Unknown';
+  const acres = formatAcreage(properties.PARCEL_ACRES || properties.ACRES || properties.ACREAGE);
+  const zoning = properties.ZONING || properties.ZONE || properties.LANDUSE || 'N/A';
+  return {
+    owner,
+    acreage: acres || 'N/A',
+    zoning,
+    source: sourceLabel,
+  };
+}
+
+function renderComps() {
+  const list = document.getElementById('compsList');
+  list.innerHTML = '';
+  comps.forEach((comp) => {
+    const item = document.createElement('div');
+    item.className = 'comp-item';
+    item.innerHTML = `
+      <div class="comp-row"><span>Price / Acre</span><strong>$${comp.pricePerAcre.toLocaleString()}</strong></div>
+      <div class="comp-row"><span>Distance</span><strong>${comp.distanceMiles.toFixed(1)} mi</strong></div>
+      <div class="comp-row"><span>Close Date</span><strong>${comp.date}</strong></div>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function setPipelineStage(stage) {
+  localStorage.setItem('pipelineStage', stage);
+  document.querySelectorAll('.pipeline-stage').forEach((el) => {
+    el.classList.toggle('active', el.dataset.stage === stage);
+  });
+  track('pipeline_stage_set', { stage });
+}
+
+function initPipeline() {
+  const saved = localStorage.getItem('pipelineStage') || pipelineStages[0];
+  document.querySelectorAll('.pipeline-stage').forEach((el) => {
+    el.addEventListener('click', () => setPipelineStage(el.dataset.stage));
+  });
+  setPipelineStage(saved);
+}
+
+function getMockRoadProximity() {
+  if (!map) return 0.5;
+  const center = map.getCenter();
+  const latFactor = Math.max(0, 1 - Math.abs(center.lat - 39.8) * 0.12);
+  const lngFactor = Math.max(0, 1 - Math.abs(center.lng + 86.0) * 0.08);
+  return Math.min(1, (latFactor + lngFactor) / 2);
+}
+
+function calculateFeasibilityScore() {
+  const slopeOn = document.getElementById('slopeToggle').checked;
+  const accessOn = document.getElementById('accessToggle').checked;
+  const utilitiesOn = document.getElementById('utilitiesToggle').checked;
+  const zoomScore = Math.min(1, (map.getZoom() - 6) / 10);
+  const roads = getMockRoadProximity();
+  const utilitiesVisible = ['transmission-lines', 'gas-pipelines'].some((layer) => {
+    return map.getLayer(layer) && map.getLayoutProperty(layer, 'visibility') !== 'none';
+  });
+  let score = 50;
+  if (slopeOn) score += 12 * zoomScore;
+  if (accessOn) score += 18 * roads;
+  if (utilitiesOn) score += utilitiesVisible ? 20 : 6;
+  score = Math.round(Math.min(99, Math.max(30, score)));
+  document.getElementById('feasibilityScore').textContent = score;
+}
+
+function initFeasibility() {
+  ['slopeToggle', 'accessToggle', 'utilitiesToggle'].forEach((id) => {
+    document.getElementById(id).addEventListener('change', calculateFeasibilityScore);
+  });
+  calculateFeasibilityScore();
+}
+
+function saveAoi() {
+  const saved = JSON.parse(localStorage.getItem('savedAois') || '[]');
+  const center = map.getCenter();
+  const zoom = map.getZoom();
+  const entry = {
+    id: Date.now(),
+    label: `AOI ${saved.length + 1}`,
+    center: [center.lng, center.lat],
+    zoom: parseFloat(zoom.toFixed(2)),
+  };
+  saved.unshift(entry);
+  localStorage.setItem('savedAois', JSON.stringify(saved.slice(0, 8)));
+  renderAoiList();
+  showToast('✓ AOI saved', 'success');
+}
+
+function clearAois() {
+  localStorage.removeItem('savedAois');
+  renderAoiList();
+  showToast('AOI list cleared', 'info');
+}
+
+function renderAoiList() {
+  const list = document.getElementById('aoiList');
+  list.innerHTML = '';
+  const saved = JSON.parse(localStorage.getItem('savedAois') || '[]');
+  if (!saved.length) {
+    const empty = document.createElement('div');
+    empty.className = 'detail-card';
+    empty.innerHTML = `<div class="detail-label">No saved AOIs</div><div class="detail-value">Save a view to revisit it.</div>`;
+    list.appendChild(empty);
+    return;
+  }
+  saved.forEach((entry) => {
+    const item = document.createElement('div');
+    item.className = 'aoi-item';
+    item.textContent = `${entry.label} • Z${entry.zoom}`;
+    item.addEventListener('click', () => {
+      map.flyTo({ center: entry.center, zoom: entry.zoom });
+      track('aoi_selected', { id: entry.id });
+    });
+    list.appendChild(item);
+  });
+}
+
+function updateReport() {
+  const stage = localStorage.getItem('pipelineStage') || pipelineStages[0];
+  const report = [
+    'Indiana Dev Intel Report',
+    `Pipeline Stage: ${stage}`,
+    '',
+    'Market Comps:',
+    ...comps.map((comp) => `• $${comp.pricePerAcre.toLocaleString()}/ac | ${comp.distanceMiles.toFixed(1)} mi | ${comp.date}`),
+    '',
+    `Feasibility Score: ${document.getElementById('feasibilityScore').textContent}`,
+  ].join('\n');
+  document.getElementById('reportContent').textContent = report;
+  return report;
+}
+
+function openReportModal() {
+  const modal = document.getElementById('reportModal');
+  modal.classList.add('active');
+  const report = updateReport();
+  track('report_generated', { stage: localStorage.getItem('pipelineStage') });
+  return report;
+}
+
+function closeReportModal() {
+  document.getElementById('reportModal').classList.remove('active');
 }
 
 // ── ArcGIS Feature Service query (for CORS-enabled services) ──
@@ -371,7 +705,9 @@ function initMap() {
 
   map.on('zoom', () => {
     document.getElementById('zoomLevel').textContent = map.getZoom().toFixed(1);
+    calculateFeasibilityScore();
   });
+  map.on('moveend', calculateFeasibilityScore);
   map.on('mousemove', (e) => {
     const {lng, lat} = e.lngLat;
     document.getElementById('coordDisplay').textContent =
@@ -381,6 +717,10 @@ function initMap() {
   map.on('load', () => {
     addRasterLayers();
     addVectorLayers();
+    renderComps();
+    initPipeline();
+    initFeasibility();
+    renderAoiList();
     setTimeout(() => document.getElementById('loading').classList.add('hidden'), 1200);
   });
 }
@@ -574,6 +914,66 @@ async function addVectorLayers() {
     layerState['railroads'] = { mapLayers: ['railroads'] };
     showToast('✓ Railroads loaded', 'success');
   } catch(e) { console.error('Rail:', e); showToast('✗ Railroads failed', 'error'); }
+
+  // ── Parcel Vector (IndianaMap FeatureServer) ──
+  try {
+    const url = 'https://gisdata.in.gov/server/rest/services/Hosted/Parcel_Boundaries_of_Indiana_Current/FeatureServer/0';
+    const data = await queryFeatures(url, {
+      bbox: IN_BBOX,
+      outFields: 'OWNER,OWNER_NAME,PARCEL_ACRES,ACRES,ACREAGE,ZONING,ZONE,LANDUSE,NAME',
+      limit: 2000
+    });
+    map.addSource('parcels-vector', { type: 'geojson', data });
+    map.addLayer({
+      id: 'parcels-vector', type: 'line', source: 'parcels-vector',
+      paint: { 'line-color': 'rgba(255,255,255,0.35)', 'line-width': 0.7 },
+      minzoom: 14,
+    });
+    map.on('click', 'parcels-vector', (e) => {
+      if (!e.features.length) return;
+      const details = getParcelDetails(e.features[0].properties || {}, 'Parcel');
+      updateParcelDetails(details);
+      showToast('Parcel details loaded', 'info');
+    });
+    map.on('mouseenter', 'parcels-vector', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'parcels-vector', () => map.getCanvas().style.cursor = '');
+    layerState['parcels-vector'] = { mapLayers: ['parcels-vector'] };
+    showToast('✓ Parcel vectors ready', 'success');
+  } catch(e) {
+    console.error('Parcel vector:', e);
+    showToast('✗ Parcel vector unavailable', 'error');
+  }
+
+  // ── PLSS Vector (Indiana DNR) ──
+  try {
+    const url = 'https://gisq.in.gov/arcgis/rest/services/DNR/PLSS_Indiana/MapServer/4';
+    const data = await queryFeatures(url, { bbox: IN_BBOX, outFields: 'TWP,RNG,SECTION', limit: 2000 });
+    map.addSource('plss-vector', { type: 'geojson', data });
+    map.addLayer({
+      id: 'plss-vector', type: 'line', source: 'plss-vector',
+      paint: { 'line-color': 'rgba(255,255,255,0.25)', 'line-width': 0.6 },
+      minzoom: 11,
+    });
+    map.on('click', 'plss-vector', (e) => {
+      if (!e.features.length) return;
+      const props = e.features[0].properties || {};
+      const details = {
+        owner: `T${props.TWP || '—'} R${props.RNG || '—'} S${props.SECTION || '—'}`,
+        acreage: 'N/A',
+        zoning: 'PLSS Section',
+        source: 'PLSS',
+      };
+      updateParcelDetails(details);
+      showToast('PLSS section loaded', 'info');
+    });
+    map.on('mouseenter', 'plss-vector', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'plss-vector', () => map.getCanvas().style.cursor = '');
+    layerState['plss-vector'] = { mapLayers: ['plss-vector'] };
+    showToast('✓ PLSS vectors ready', 'success');
+  } catch(e) {
+    console.error('PLSS vector:', e);
+    showToast('✗ PLSS vector unavailable', 'error');
+  }
 }
 
 // ── Toggle Layer ──
@@ -591,6 +991,8 @@ function toggleLayer(el) {
       map.setLayoutProperty(lid, 'visibility', isOn ? 'none' : 'visible');
     }
   });
+  track('layer_toggled', { layer: id, enabled: !isOn });
+  calculateFeasibilityScore();
 }
 
 function toggleSidebar() {
@@ -606,15 +1008,31 @@ document.getElementById('searchInput').addEventListener('keydown', async (e) => 
   if (!q) return;
   // Coordinate check
   const m = q.match(/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/);
-  if (m) { map.flyTo({ center: [parseFloat(m[2]), parseFloat(m[1])], zoom: 15 }); return; }
+  if (m) { map.flyTo({ center: [parseFloat(m[2]), parseFloat(m[1])], zoom: 15 }); renderComps(); return; }
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+', Indiana, USA')}&format=json&limit=1`);
     const data = await res.json();
     if (data.length) {
       map.flyTo({ center: [parseFloat(data[0].lon), parseFloat(data[0].lat)], zoom: 15 });
       showToast(`📍 ${data[0].display_name.split(',').slice(0,2).join(',')}`, 'info');
+      renderComps();
     } else { showToast('No results found', 'error'); }
   } catch(err) { showToast('Search failed', 'error'); }
+});
+
+document.getElementById('saveAoiButton').addEventListener('click', saveAoi);
+document.getElementById('clearAoiButton').addEventListener('click', clearAois);
+document.getElementById('openReportButton').addEventListener('click', openReportModal);
+document.getElementById('closeReportButton').addEventListener('click', closeReportModal);
+document.getElementById('copyReportButton').addEventListener('click', async () => {
+  const report = updateReport();
+  try {
+    await navigator.clipboard.writeText(report);
+    showToast('✓ Report copied to clipboard', 'success');
+    track('report_copied', {});
+  } catch (err) {
+    showToast('Copy failed', 'error');
+  }
 });
 
 initMap();
