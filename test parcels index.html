@@ -247,6 +247,8 @@
   }
   .badge-electric { background: rgba(245,197,66,0.15); color: var(--accent-yellow); }
   .badge-gas { background: rgba(245,158,66,0.15); color: var(--accent-orange); }
+  .badge-water { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+  .badge-telecom { background: rgba(167,139,250,0.15); color: var(--accent-purple); }
 
   .info-hint {
     background: var(--bg-tertiary); border-radius: 5px; padding: 9px 10px;
@@ -298,6 +300,20 @@
       </div>
       <div class="layer-meta">HIFLD national dataset</div>
 
+      <div class="layer-item" data-layer="electric-substations" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #f5c542;"></div>
+        <span class="layer-name">Electric Substations</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">HIFLD substations</div>
+
+      <div class="layer-item" data-layer="electric-distribution" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #f5c542;"></div>
+        <span class="layer-name">Electric Distribution</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">Local distribution lines</div>
+
       <div class="layer-item" data-layer="gas-pipelines" onclick="toggleLayer(this)">
         <div class="layer-swatch" style="background: #f59e42;"></div>
         <span class="layer-name">Natural Gas Pipelines</span>
@@ -305,12 +321,59 @@
       </div>
       <div class="layer-meta">EIA Interstate & Intrastate</div>
 
+      <div class="layer-item" data-layer="gas-mains" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #f59e42;"></div>
+        <span class="layer-name">Gas Distribution Mains</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">Local gas mains</div>
+
+      <div class="layer-item" data-layer="water-mains" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #3b82f6;"></div>
+        <span class="layer-name">Water Mains</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">Potable water mains</div>
+
+      <div class="layer-item" data-layer="wastewater-mains" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #14b8a6;"></div>
+        <span class="layer-name">Wastewater Mains</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">Sanitary/combined sewers</div>
+
       <div class="layer-item" data-layer="railroads" onclick="toggleLayer(this)">
         <div class="layer-swatch" style="background: #a78bfa;"></div>
         <span class="layer-name">Rail Lines</span>
         <div class="layer-toggle-switch on"></div>
       </div>
       <div class="layer-meta">HIFLD national railroads</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Telecom</div>
+    <div class="layer-group">
+      <div class="layer-item" data-layer="fiber-backbone" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #a78bfa;"></div>
+        <span class="layer-name">Fiber Backbone</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">Fiber routes/backbone</div>
+
+      <div class="layer-item" data-layer="cell-towers" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #a78bfa;"></div>
+        <span class="layer-name">Cell Towers</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">Carrier macro sites</div>
+
+      <div class="layer-item" data-layer="broadband-areas" onclick="toggleLayer(this)">
+        <div class="layer-swatch" style="background: #a78bfa;"></div>
+        <span class="layer-name">Broadband Service Areas</span>
+        <div class="layer-toggle-switch on"></div>
+      </div>
+      <div class="layer-meta">Provider footprints</div>
     </div>
   </div>
 
@@ -517,6 +580,36 @@ function getParcelDetails(properties, sourceLabel) {
     zoning,
     source: sourceLabel,
   };
+}
+
+function getFirstProperty(props, keys) {
+  for (const key of keys) {
+    const value = props[key];
+    if (value !== null && value !== undefined && value !== '') {
+      return value;
+    }
+  }
+  return null;
+}
+
+function formatCapacity(value, suffix = '') {
+  if (value === null || value === undefined || value === '') return null;
+  const num = Number(value);
+  if (!Number.isNaN(num)) {
+    return `${num.toLocaleString()}${suffix}`;
+  }
+  return `${value}${suffix}`;
+}
+
+function buildPopupRows(rows) {
+  return rows
+    .filter((row) => row.value !== null && row.value !== undefined && row.value !== '')
+    .map((row) => `
+      <div class="popup-row">
+        <span class="popup-label">${row.label}</span>
+        <span class="popup-value">${row.badgeClass ? `<span class="popup-badge ${row.badgeClass}">${row.value}</span>` : row.value}</span>
+      </div>
+    `).join('');
 }
 
 function renderComps() {
@@ -842,6 +935,81 @@ async function addVectorLayers() {
     showToast('✓ Transmission Lines loaded', 'success');
   } catch(e) { console.error('Trans:', e); showToast('✗ Transmission Lines failed', 'error'); }
 
+  // ── Electric Substations ──
+  try {
+    const url = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Electric_Substations/FeatureServer/0';
+    const data = await queryFeatures(url, { bbox: IN_BBOX, outFields: 'OWNER,SUB_NAME,SUB_ID,VOLTAGE,CAPACITY,MVA', limit: 5000 });
+    map.addSource('electric-substations', { type: 'geojson', data });
+    map.addLayer({
+      id: 'electric-substations', type: 'circle', source: 'electric-substations',
+      paint: {
+        'circle-color': '#f5c542',
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 6, 2, 12, 5, 16, 7],
+        'circle-opacity': 0.85,
+        'circle-stroke-color': '#0a0e17',
+        'circle-stroke-width': 1,
+      }
+    });
+    map.on('click', 'electric-substations', (e) => {
+      if (!e.features.length) return;
+      const p = e.features[0].properties || {};
+      const capacity = formatCapacity(getFirstProperty(p, ['CAPACITY', 'MVA']), ' MVA');
+      const voltage = formatCapacity(getFirstProperty(p, ['VOLTAGE', 'VOLT_KV']), ' kV');
+      showPopup(e.lngLat, `
+        <div class="popup-title">⚡ Electric Substation</div>
+        ${buildPopupRows([
+          { label: 'Owner', value: getFirstProperty(p, ['OWNER', 'OWNER_NAME', 'UTILITY']) || 'Unknown' },
+          { label: 'Name', value: getFirstProperty(p, ['SUB_NAME', 'NAME', 'SUB_ID']) },
+          { label: 'Capacity', value: capacity, badgeClass: 'badge-electric' },
+          { label: 'Voltage', value: voltage, badgeClass: 'badge-electric' },
+        ])}
+      `);
+    });
+    map.on('mouseenter', 'electric-substations', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'electric-substations', () => map.getCanvas().style.cursor = '');
+    layerState['electric-substations'] = { mapLayers: ['electric-substations'] };
+    showToast('✓ Electric Substations loaded', 'success');
+  } catch (e) {
+    console.error('Substations:', e);
+    showToast('✗ Electric Substations failed', 'error');
+  }
+
+  // ── Electric Distribution Lines ──
+  try {
+    const url = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Electric_Distribution_Lines/FeatureServer/0';
+    const data = await queryFeatures(url, { bbox: IN_BBOX, outFields: 'OWNER,VOLTAGE,STATUS,LINECLASS,PHASES', limit: 5000 });
+    map.addSource('electric-distribution', { type: 'geojson', data });
+    map.addLayer({
+      id: 'electric-distribution', type: 'line', source: 'electric-distribution',
+      paint: {
+        'line-color': '#f5c542',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.8, 12, 2, 16, 3.5],
+        'line-opacity': 0.75,
+      }
+    });
+    map.on('click', 'electric-distribution', (e) => {
+      if (!e.features.length) return;
+      const p = e.features[0].properties || {};
+      const voltage = formatCapacity(getFirstProperty(p, ['VOLTAGE', 'VOLT_KV']), ' kV');
+      showPopup(e.lngLat, `
+        <div class="popup-title">⚡ Electric Distribution</div>
+        ${buildPopupRows([
+          { label: 'Owner', value: getFirstProperty(p, ['OWNER', 'OWNER_NAME', 'UTILITY']) || 'Unknown' },
+          { label: 'Voltage', value: voltage, badgeClass: 'badge-electric' },
+          { label: 'Class', value: getFirstProperty(p, ['LINECLASS', 'STATUS']) },
+          { label: 'Phases', value: getFirstProperty(p, ['PHASES']) },
+        ])}
+      `);
+    });
+    map.on('mouseenter', 'electric-distribution', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'electric-distribution', () => map.getCanvas().style.cursor = '');
+    layerState['electric-distribution'] = { mapLayers: ['electric-distribution'] };
+    showToast('✓ Electric Distribution loaded', 'success');
+  } catch (e) {
+    console.error('Electric distribution:', e);
+    showToast('✗ Electric Distribution failed', 'error');
+  }
+
   // ── Natural Gas Pipelines ── (HIFLD on ArcGIS Online — same host as transmission, should have CORS)
   try {
     const url = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Natural_Gas_Pipelines/FeatureServer/0';
@@ -886,6 +1054,119 @@ async function addVectorLayers() {
     } catch(e2) { console.error('Gas fallback:', e2); showToast('✗ Gas Pipelines unavailable', 'error'); }
   }
 
+  // ── Gas Distribution Mains ──
+  try {
+    const url = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Natural_Gas_Distribution_Mains/FeatureServer/0';
+    const data = await queryFeatures(url, { bbox: IN_BBOX, outFields: 'OWNER,OPERATOR,DIAMETER,PRESSURE,MATERIAL', limit: 5000 });
+    map.addSource('gas-mains', { type: 'geojson', data });
+    map.addLayer({
+      id: 'gas-mains', type: 'line', source: 'gas-mains',
+      paint: {
+        'line-color': '#f59e42',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.7, 12, 1.8, 16, 3],
+        'line-opacity': 0.75,
+        'line-dasharray': [4, 2],
+      }
+    });
+    map.on('click', 'gas-mains', (e) => {
+      if (!e.features.length) return;
+      const p = e.features[0].properties || {};
+      const diameter = formatCapacity(getFirstProperty(p, ['DIAMETER', 'DIAM_IN']), ' in');
+      const pressure = formatCapacity(getFirstProperty(p, ['PRESSURE', 'PRESS_PSI']), ' psi');
+      showPopup(e.lngLat, `
+        <div class="popup-title">🔥 Gas Distribution Main</div>
+        ${buildPopupRows([
+          { label: 'Operator', value: getFirstProperty(p, ['OPERATOR', 'OWNER', 'COMPANY']) || 'Unknown' },
+          { label: 'Diameter', value: diameter, badgeClass: 'badge-gas' },
+          { label: 'Pressure', value: pressure, badgeClass: 'badge-gas' },
+          { label: 'Material', value: getFirstProperty(p, ['MATERIAL']) },
+        ])}
+      `);
+    });
+    map.on('mouseenter', 'gas-mains', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'gas-mains', () => map.getCanvas().style.cursor = '');
+    layerState['gas-mains'] = { mapLayers: ['gas-mains'] };
+    showToast('✓ Gas Distribution Mains loaded', 'success');
+  } catch (e) {
+    console.error('Gas mains:', e);
+    showToast('✗ Gas Distribution Mains failed', 'error');
+  }
+
+  // ── Water Mains ──
+  try {
+    const url = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Water_Mains/FeatureServer/0';
+    const data = await queryFeatures(url, { bbox: IN_BBOX, outFields: 'OWNER,DIAMETER,MATERIAL,TYPE,PRESSURE', limit: 5000 });
+    map.addSource('water-mains', { type: 'geojson', data });
+    map.addLayer({
+      id: 'water-mains', type: 'line', source: 'water-mains',
+      paint: {
+        'line-color': '#3b82f6',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.7, 12, 1.8, 16, 3],
+        'line-opacity': 0.8,
+      }
+    });
+    map.on('click', 'water-mains', (e) => {
+      if (!e.features.length) return;
+      const p = e.features[0].properties || {};
+      const diameter = formatCapacity(getFirstProperty(p, ['DIAMETER', 'DIAM_IN']), ' in');
+      const pressure = formatCapacity(getFirstProperty(p, ['PRESSURE', 'PRESS_PSI']), ' psi');
+      showPopup(e.lngLat, `
+        <div class="popup-title">💧 Water Main</div>
+        ${buildPopupRows([
+          { label: 'Owner', value: getFirstProperty(p, ['OWNER', 'UTILITY', 'SYSTEM']) || 'Unknown' },
+          { label: 'Diameter', value: diameter, badgeClass: 'badge-water' },
+          { label: 'Pressure', value: pressure, badgeClass: 'badge-water' },
+          { label: 'Material', value: getFirstProperty(p, ['MATERIAL']) },
+        ])}
+      `);
+    });
+    map.on('mouseenter', 'water-mains', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'water-mains', () => map.getCanvas().style.cursor = '');
+    layerState['water-mains'] = { mapLayers: ['water-mains'] };
+    showToast('✓ Water Mains loaded', 'success');
+  } catch (e) {
+    console.error('Water mains:', e);
+    showToast('✗ Water Mains failed', 'error');
+  }
+
+  // ── Wastewater Mains ──
+  try {
+    const url = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Wastewater_Mains/FeatureServer/0';
+    const data = await queryFeatures(url, { bbox: IN_BBOX, outFields: 'OWNER,DIAMETER,TYPE,FLOW,PIPE_MATL', limit: 5000 });
+    map.addSource('wastewater-mains', { type: 'geojson', data });
+    map.addLayer({
+      id: 'wastewater-mains', type: 'line', source: 'wastewater-mains',
+      paint: {
+        'line-color': '#14b8a6',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.7, 12, 1.8, 16, 3],
+        'line-opacity': 0.8,
+        'line-dasharray': [3, 2],
+      }
+    });
+    map.on('click', 'wastewater-mains', (e) => {
+      if (!e.features.length) return;
+      const p = e.features[0].properties || {};
+      const diameter = formatCapacity(getFirstProperty(p, ['DIAMETER', 'DIAM_IN']), ' in');
+      const flow = formatCapacity(getFirstProperty(p, ['FLOW', 'FLOW_MGD']), ' MGD');
+      showPopup(e.lngLat, `
+        <div class="popup-title">🚰 Wastewater Main</div>
+        ${buildPopupRows([
+          { label: 'Owner', value: getFirstProperty(p, ['OWNER', 'UTILITY', 'SYSTEM']) || 'Unknown' },
+          { label: 'Diameter', value: diameter, badgeClass: 'badge-water' },
+          { label: 'Flow', value: flow, badgeClass: 'badge-water' },
+          { label: 'Type', value: getFirstProperty(p, ['TYPE']) },
+        ])}
+      `);
+    });
+    map.on('mouseenter', 'wastewater-mains', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'wastewater-mains', () => map.getCanvas().style.cursor = '');
+    layerState['wastewater-mains'] = { mapLayers: ['wastewater-mains'] };
+    showToast('✓ Wastewater Mains loaded', 'success');
+  } catch (e) {
+    console.error('Wastewater mains:', e);
+    showToast('✗ Wastewater Mains failed', 'error');
+  }
+
   // ── Railroads ── (HIFLD)
   try {
     const url = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Railroads_1/FeatureServer/0';
@@ -914,6 +1195,122 @@ async function addVectorLayers() {
     layerState['railroads'] = { mapLayers: ['railroads'] };
     showToast('✓ Railroads loaded', 'success');
   } catch(e) { console.error('Rail:', e); showToast('✗ Railroads failed', 'error'); }
+
+  // ── Fiber Backbone ──
+  try {
+    const url = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Fiber_Optic_Cable/FeatureServer/0';
+    const data = await queryFeatures(url, { bbox: IN_BBOX, outFields: 'OWNER,PROVIDER,FIBER_CT,CAPACITY,STATUS', limit: 5000 });
+    map.addSource('fiber-backbone', { type: 'geojson', data });
+    map.addLayer({
+      id: 'fiber-backbone', type: 'line', source: 'fiber-backbone',
+      paint: {
+        'line-color': '#a78bfa',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.8, 12, 2, 16, 3.5],
+        'line-opacity': 0.8,
+      }
+    });
+    map.on('click', 'fiber-backbone', (e) => {
+      if (!e.features.length) return;
+      const p = e.features[0].properties || {};
+      const fiberCount = getFirstProperty(p, ['FIBER_CT', 'FIBER_CNT', 'COUNT']);
+      const capacity = formatCapacity(getFirstProperty(p, ['CAPACITY', 'BANDWIDTH']), ' Gbps');
+      showPopup(e.lngLat, `
+        <div class="popup-title">🧵 Fiber Backbone</div>
+        ${buildPopupRows([
+          { label: 'Provider', value: getFirstProperty(p, ['PROVIDER', 'OWNER', 'COMPANY']) || 'Unknown' },
+          { label: 'Fiber Count', value: fiberCount, badgeClass: 'badge-telecom' },
+          { label: 'Capacity', value: capacity, badgeClass: 'badge-telecom' },
+          { label: 'Status', value: getFirstProperty(p, ['STATUS']) },
+        ])}
+      `);
+    });
+    map.on('mouseenter', 'fiber-backbone', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'fiber-backbone', () => map.getCanvas().style.cursor = '');
+    layerState['fiber-backbone'] = { mapLayers: ['fiber-backbone'] };
+    showToast('✓ Fiber Backbone loaded', 'success');
+  } catch (e) {
+    console.error('Fiber:', e);
+    showToast('✗ Fiber Backbone failed', 'error');
+  }
+
+  // ── Cell Towers ──
+  try {
+    const url = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Cell_Towers/FeatureServer/0';
+    const data = await queryFeatures(url, { bbox: IN_BBOX, outFields: 'OWNER,PROVIDER,CARRIER,HEIGHT,STRUCTURE', limit: 5000 });
+    map.addSource('cell-towers', { type: 'geojson', data });
+    map.addLayer({
+      id: 'cell-towers', type: 'circle', source: 'cell-towers',
+      paint: {
+        'circle-color': '#a78bfa',
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 6, 2, 12, 4, 16, 6],
+        'circle-opacity': 0.85,
+        'circle-stroke-color': '#0a0e17',
+        'circle-stroke-width': 1,
+      }
+    });
+    map.on('click', 'cell-towers', (e) => {
+      if (!e.features.length) return;
+      const p = e.features[0].properties || {};
+      const height = formatCapacity(getFirstProperty(p, ['HEIGHT', 'HEIGHT_FT']), ' ft');
+      showPopup(e.lngLat, `
+        <div class="popup-title">📡 Cell Tower</div>
+        ${buildPopupRows([
+          { label: 'Carrier', value: getFirstProperty(p, ['CARRIER', 'PROVIDER', 'OWNER']) || 'Unknown' },
+          { label: 'Height', value: height, badgeClass: 'badge-telecom' },
+          { label: 'Structure', value: getFirstProperty(p, ['STRUCTURE', 'TYPE']) },
+        ])}
+      `);
+    });
+    map.on('mouseenter', 'cell-towers', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'cell-towers', () => map.getCanvas().style.cursor = '');
+    layerState['cell-towers'] = { mapLayers: ['cell-towers'] };
+    showToast('✓ Cell Towers loaded', 'success');
+  } catch (e) {
+    console.error('Cell towers:', e);
+    showToast('✗ Cell Towers failed', 'error');
+  }
+
+  // ── Broadband Service Areas ──
+  try {
+    const url = 'https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Broadband_Service_Areas/FeatureServer/0';
+    const data = await queryFeatures(url, { bbox: IN_BBOX, outFields: 'PROVIDER,COMPANY,SPEED_Mbps,TECH', limit: 5000 });
+    map.addSource('broadband-areas', { type: 'geojson', data });
+    map.addLayer({
+      id: 'broadband-areas', type: 'fill', source: 'broadband-areas',
+      paint: {
+        'fill-color': '#a78bfa',
+        'fill-opacity': 0.2,
+      }
+    });
+    map.addLayer({
+      id: 'broadband-areas-outline', type: 'line', source: 'broadband-areas',
+      paint: {
+        'line-color': '#a78bfa',
+        'line-width': 1.2,
+        'line-opacity': 0.55,
+      }
+    });
+    map.on('click', 'broadband-areas', (e) => {
+      if (!e.features.length) return;
+      const p = e.features[0].properties || {};
+      const speed = formatCapacity(getFirstProperty(p, ['SPEED_Mbps', 'MAX_SPEED']), ' Mbps');
+      showPopup(e.lngLat, `
+        <div class="popup-title">📶 Broadband Service Area</div>
+        ${buildPopupRows([
+          { label: 'Provider', value: getFirstProperty(p, ['PROVIDER', 'COMPANY', 'OWNER']) || 'Unknown' },
+          { label: 'Max Speed', value: speed, badgeClass: 'badge-telecom' },
+          { label: 'Technology', value: getFirstProperty(p, ['TECH', 'TECHNOLOGY']) },
+        ])}
+      `);
+    });
+    map.on('mouseenter', 'broadband-areas', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'broadband-areas', () => map.getCanvas().style.cursor = '');
+    layerState['broadband-areas'] = { mapLayers: ['broadband-areas', 'broadband-areas-outline'] };
+    showToast('✓ Broadband Service Areas loaded', 'success');
+  } catch (e) {
+    console.error('Broadband:', e);
+    showToast('✗ Broadband Service Areas failed', 'error');
+  }
 
   // ── Parcel Vector (IndianaMap FeatureServer) ──
   try {
